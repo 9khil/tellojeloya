@@ -14,10 +14,10 @@ S = 40
 FPS = 120
 
 #Team Mega
+DEBUG = True
 JUMPSPEED = 100
 GRAVITY = -40
 MAX_JUMP_TIME = 1000 # milliseconds
-CAN_JUMP = True
 
 # Use a dictionary to track keys and the time they were pressed
 key_press_times = {}
@@ -59,24 +59,6 @@ class FrontEnd(object):
         # create update timer
         pygame.time.set_timer(pygame.USEREVENT + 1, 1000 // FPS)
 
-     # Function to run after a timeout
-    def timeout_callback(self):
-        print("Timeout reached!")
-        CAN_JUMP = False
-        self.up_down_velocity = GRAVITY
-        self.for_back_velocity = 0
-
-    # Function to create a timeout
-    def set_timeout(callback, delay, self):
-        pygame.time.set_timer(pygame.USEREVENT, delay)
-        callback(self)
-
-    def asd(self, event:Event, action):
-        if event.key not in key_press_times:
-            print(f"Key {event.key} pressed")
-            action(self)
-            key_press_times[event.key] = pygame.time.get_ticks()
-
     def run(self):
 
         self.tello.connect()
@@ -99,11 +81,19 @@ class FrontEnd(object):
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         should_stop = True
-                    else:
+                    elif event.key not in key_press_times:
                         self.keydown(event.key)
+                        key_press_times[event.key] = pygame.time.get_ticks()
                 elif event.type == pygame.KEYUP:
                     self.keyup(event.key)
 
+            keys = pygame.key.get_pressed()
+            for key, press_time in list(key_press_times.items()):
+                if not keys[key] or pygame.time.get_ticks() - press_time > MAX_JUMP_TIME:
+                    print(f"Action for key {key} stopped")
+                    del key_press_times[key]
+                    self.abortJump()
+            
             if frame_read.stopped:
                 break
 
@@ -129,6 +119,15 @@ class FrontEnd(object):
 
         # Call it always before finishing. To deallocate resources.
         self.tello.end()
+
+    def jump(self):
+        self.up_down_velocity = JUMPSPEED
+        if not DEBUG:
+            self.for_back_velocity = JUMPSPEED
+
+    def abortJump(self):
+        self.up_down_velocity = GRAVITY
+        self.for_back_velocity = 0
 
     def tof(self):
         toff = self.tello.get_distance_tof()
@@ -161,9 +160,7 @@ class FrontEnd(object):
         elif key == pygame.K_d:  # set yaw clockwise velocity
             self.yaw_velocity = S
         elif key == pygame.K_j: # JUMP
-            self.set_timeout(self.timeout_callback, MAX_JUMP_TIME)
-            self.up_down_velocity = JUMPSPEED
-            self.for_back_velocity = JUMPSPEED
+            self.jump()
 
     def keyup(self, key):
         """ Update velocities based on key released
@@ -185,9 +182,10 @@ class FrontEnd(object):
             not self.tello.land()
             self.send_rc_control = False
         elif key == pygame.K_j: # JUMP
-            self.up_down_velocity = GRAVITY
-            self.for_back_velocity = 0
-            CAN_JUMP = True
+            if key in key_press_times:
+                del key_press_times[key]
+            self.abortJump()
+            
 
 
 
