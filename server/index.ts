@@ -1,13 +1,13 @@
 const DRONES = "drones" as const
 const FE = "fe" as const
 
-type FromFeToDrone = {
+type MsgFromFeToDrone = {
     id: string
     action: string
     duration: number
 }
 
-type Asd = {
+type MsgToDrone = {
     action: string
     duration: number
 }
@@ -24,16 +24,17 @@ const server = Bun.serve<{ id: string, type: string }>({
     },
     websocket: {
         async message(ws, message) {
+            console.log(ws.data.id, message)
             if (ws.isSubscribed(DRONES)) {
-                server.publish(FE, message)
+                server.publish(FE, JSON.stringify({ id: ws.data.id, message }))
             }
             if (ws.isSubscribed(FE)) {
                 try {
-                    const msg = JSON.parse(message as string) as FromFeToDrone
+                    const msg = JSON.parse(message as string) as MsgFromFeToDrone
                     const msg_to_drone = {
                         action: msg.action,
                         duration: msg.duration
-                    } satisfies Asd
+                    } satisfies MsgToDrone
                     server.publish(msg.id, JSON.stringify(msg_to_drone))
                 } catch (e) {
                     console.log("Error parsing message", e)
@@ -53,9 +54,7 @@ const server = Bun.serve<{ id: string, type: string }>({
             }
         },
         close(ws, code, reason) {
-            if (ws.isSubscribed(DRONES)) {
-                server.publish(DRONES, `Lost connection with ${ws.data.id}, reason: ${reason}`)
-            }
+            console.log(`Lost connection with ${ws.data.id}`, { code, reason })
         },
         ping(ws, data) {
             console.log('PING')
