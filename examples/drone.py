@@ -1,4 +1,6 @@
 from djitellopy import Tello
+import asyncio
+import websockets
 import cv2
 import pygame
 import numpy as np
@@ -61,6 +63,7 @@ class FrontEnd(object):
 
     def run(self):
 
+        asyncio.run(self.connectToGameServer())
         self.tello.connect()
         self.tello.set_speed(self.speed)
 
@@ -119,6 +122,15 @@ class FrontEnd(object):
 
         # Call it always before finishing. To deallocate resources.
         self.tello.end()
+
+    
+    async def connectToGameServer():
+        uri = "ws://10.168.119.237:3000"  # Replace this with the actual WebSocket server address
+        async with websockets.connect(uri) as websocket:
+            while True:
+                # Perform actions with the WebSocket connection
+                message = await websocket.recv()
+                print("Received message:", message)
 
     def jump(self):
         self.up_down_velocity = JUMPSPEED
