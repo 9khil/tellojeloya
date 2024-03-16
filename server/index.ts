@@ -1,23 +1,53 @@
-import { createId } from '@paralleldrive/cuid2'
+const DRONES = "drones" as const
+const FE = "fe" as const
 
-const server = Bun.serve<{ id: string }>({
+type FromFeToDrone = {
+    id: string
+    action: string
+    duration: number
+}
+
+const server = Bun.serve<{ id: string, type: string }>({
     fetch(req, server) {
+        const url = new URL(req.url)
+        const clientId = url.searchParams.get('clientId')
+        const type = url.searchParams.get('type')
         const upgrade = server.upgrade(req, {
-            data: { id: createId() }
+            data: { id: clientId, type }
         })
-        console.log(upgrade)
         return upgrade ? undefined : new Response('Handshake failed', { status: 400 })
     },
     websocket: {
         async message(ws, message) {
-            server.publish("room", message)
-            if (message.includes("room")) {
-                // server.publish("room", JSON.stringify({ user: ws.data.id, message }))
+            if (ws.isSubscribed(DRONES)) {
+                server.publish(FE, message)
+            }
+            if (ws.isSubscribed(FE)) {
+                if (message.includes("1")) {
+                    server.publish("1", message)
+                }
+                if (message.includes("2")) {
+                    server.publish("2", message)
+                }
+            } else {
+                server.publish(DRONES, message)
             }
         },
         open(ws) {
-            ws.subscribe("room")
-            server.publish("room", JSON.stringify(ws.data.id + " joined the room"))
+            if (ws.data.type == DRONES) {
+                ws.subscribe(DRONES)
+                ws.subscribe(ws.data.id)
+                server.publish(DRONES, JSON.stringify(ws.data.id + " joined drones"))
+            }
+            if (ws.data.type == FE) {
+                ws.subscribe(FE)
+                server.publish(FE, JSON.stringify(ws.data.id + " joined FE"))
+            }
+        },
+        close(ws, code, reason) {
+            if (ws.isSubscribed(DRONES)) {
+                server.publish(DRONES, `Lost connection with ${ws.data.id}, reason: ${reason}`)
+            }
         },
         ping(ws, data) {
             console.log('PING')
@@ -25,8 +55,8 @@ const server = Bun.serve<{ id: string }>({
         pong(ws, data) {
             console.log('PONG')
         },
-        sendPings: true
+        sendPings: true,
     }
 })
 
-console.log(`Listening on ${server.hostname}:${server.port}`)
+console.log(`Listening on http://${server.hostname}:${server.port}`)
