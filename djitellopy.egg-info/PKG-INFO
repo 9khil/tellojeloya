@@ -1,3 +1,31 @@
+Metadata-Version: 2.1
+Name: djitellopy
+Version: 2.5.0
+Summary: Tello drone library including support for video streaming, swarms, state packets and more
+Home-page: https://github.com/damiafuentes/DJITelloPy
+Download-URL: https://github.com/damiafuentes/DJITelloPy/archive/2.5.0.tar.gz
+Author: Jakob Löw
+Author-email: djitellopy@m4gnus.de
+License: MIT
+Keywords: tello,dji,drone,sdk,official sdk
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Build Tools
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+License-File: LICENSE.txt
+Requires-Dist: numpy
+Requires-Dist: opencv-python
+Requires-Dist: av
+Requires-Dist: pillow
+
 # DJITelloPy
 ## [中文文档 (Chinese version of this readme)](README_CN.md)
 
@@ -51,15 +79,15 @@ tello.land()
 ```
 
 ### More examples
-In the [examples](examples/) directory there are some code examples.
+In the [examples](https://github.com/damiafuentes/DJITelloPy/tree/master/examples/) directory there are some code examples.
 Comments in the examples are mostly in both english and chinese.
 
-- [taking a picture](examples/take-picture.py)
-- [recording a video](examples/record-video.py)
-- [flying a swarm (multiple Tellos at once)](examples/simple-swarm.py)
-- [simple controlling using your keyboard](examples/manual-control-opencv.py)
-- [mission pad detection](examples/mission-pads.py)
-- [fully featured manual control using pygame](examples/manual-control-pygame.py)
+- [taking a picture](https://github.com/damiafuentes/DJITelloPy/tree/master/examples/take-picture.py)
+- [recording a video](https://github.com/damiafuentes/DJITelloPy/tree/master/examples/record-video.py)
+- [flying a swarm (multiple Tellos at once)](https://github.com/damiafuentes/DJITelloPy/tree/master/examples/simple-swarm.py)
+- [simple controlling using your keyboard](https://github.com/damiafuentes/DJITelloPy/tree/master/examples/manual-control-opencv.py)
+- [mission pad detection](https://github.com/damiafuentes/DJITelloPy/tree/master/examples/mission-pads.py)
+- [fully featured manual control using pygame](https://github.com/damiafuentes/DJITelloPy/tree/master/examples/manual-control-pygame.py)
 
 ### Notes
 - If you are using the `streamon` command and the response is `Unknown command` means you have to update the Tello firmware. That can be done through the Tello app.
