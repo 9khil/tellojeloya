@@ -4,8 +4,6 @@ import pygame
 import numpy as np
 import time
 
-from pygame.event import Event
-
 # Speed of the drone
 S = 40
 
@@ -15,12 +13,8 @@ FPS = 120
 
 #Team Mega
 JUMPSPEED = 100
-GRAVITY = -40
-MAX_JUMP_TIME = 1000 # milliseconds
-CAN_JUMP = True
+GRAVITY = -50
 
-# Use a dictionary to track keys and the time they were pressed
-key_press_times = {}
 
 class FrontEnd(object):
     """ Maintains the Tello display and moves it through the keyboard keys.
@@ -59,24 +53,6 @@ class FrontEnd(object):
         # create update timer
         pygame.time.set_timer(pygame.USEREVENT + 1, 1000 // FPS)
 
-     # Function to run after a timeout
-    def timeout_callback(self):
-        print("Timeout reached!")
-        CAN_JUMP = False
-        self.up_down_velocity = GRAVITY
-        self.for_back_velocity = 0
-
-    # Function to create a timeout
-    def set_timeout(callback, delay, self):
-        pygame.time.set_timer(pygame.USEREVENT, delay)
-        callback(self)
-
-    def asd(self, event:Event, action):
-        if event.key not in key_press_times:
-            print(f"Key {event.key} pressed")
-            action(self)
-            key_press_times[event.key] = pygame.time.get_ticks()
-
     def run(self):
 
         self.tello.connect()
@@ -112,10 +88,10 @@ class FrontEnd(object):
             frame = frame_read.frame
             # battery %
             text = "Battery: {}%".format(self.tello.get_battery())
-            textD = "Height: {} cm".format(self.tof())
+            textH = "Height: {}cm".format(self.tello.get_height())
             cv2.putText(frame, text, (5, 720 - 5),
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            cv2.putText(frame, textD, (5, 680 - 5),
+            cv2.putText(frame, textH, (5, 620 - 5),
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame = np.rot90(frame)
@@ -129,15 +105,6 @@ class FrontEnd(object):
 
         # Call it always before finishing. To deallocate resources.
         self.tello.end()
-
-    def tof(self):
-        toff = self.tello.get_distance_tof()
-        if toff < 30:
-            return "dead"
-        elif toff == 6553:
-             return "grounded"
-        else:
-            return self.tello.get_distance_tof()
 
     def keydown(self, key):
         """ Update velocities based on key pressed
@@ -160,8 +127,9 @@ class FrontEnd(object):
             self.yaw_velocity = -S
         elif key == pygame.K_d:  # set yaw clockwise velocity
             self.yaw_velocity = S
+        elif key == pygame.K_v:
+            self.tello.flip_forward()
         elif key == pygame.K_j: # JUMP
-            self.set_timeout(self.timeout_callback, MAX_JUMP_TIME)
             self.up_down_velocity = JUMPSPEED
             self.for_back_velocity = JUMPSPEED
 
@@ -187,9 +155,6 @@ class FrontEnd(object):
         elif key == pygame.K_j: # JUMP
             self.up_down_velocity = GRAVITY
             self.for_back_velocity = 0
-            CAN_JUMP = True
-
-
 
     def update(self):
         """ Update routine. Send velocities to Tello.
