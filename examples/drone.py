@@ -141,38 +141,46 @@ class FrontEnd(object):
         # Call it always before finishing. To deallocate resources.
         self.tello.end()
     
-    async def send_message(self):
-        print("SEND MESSAGE")
-        print("SEND MESSAGE")
-        print("SEND MESSAGE")
-        print("SEND MESSAGE")
-        uri = "ws://192.168.0.100:3000?type=drones&clientId=0" 
-        async with websockets.connect(uri) as websocket:
-            while True:
-                try:  
-                    print("prøver å sende banan")
-                    await websocket.send("banan")
-                except Exception as e:
-                    print(f"Connection lost?: {e}")
+    # async def send_message(self):
+    #     print("SEND MESSAGE")
+    #     print("SEND MESSAGE")
+    #     print("SEND MESSAGE")
+    #     print("SEND MESSAGE")
+    #     uri = "ws://192.168.0.100:3000?type=drones&clientId=0" 
+    #     async with websockets.connect(uri) as websocket:
+    #         while True:
+    #             try:  
+    #                 print("prøver å sende banan")
+    #                 await websocket.send("banan")
+    #             except Exception as e:
+    #                 print(f"Connection lost?: {e}")
 
 
     def start_websocket_thread(self):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_forever(self.send_message())
+        loop.run_until_complete(self.connectToGameServer())
     
 
     async def connectToGameServer(self):
+        prev = ""
         uri = "ws://192.168.0.100:3000?type=drones&clientId=0"  # Replace this with the actual WebSocket server address
         async with websockets.connect(uri) as websocket:
             while True:
                 try:    
                     # Perform actions with the WebSocket connection
+                    if prev != self.HEIGHT:
+                        await websocket.send(self.HEIGHT)
+                        prev = self.HEIGHT
+                    
                     message = await websocket.recv()
-                    print("received message:", message)
-                    parsed_data = json.loads(message)
-                    if parsed_data["action"] == "jump":
-                        self.jump(parsed_data["duration"])
+                    
+                    if isinstance(message, str): 
+                        print("GOT STRING")
+                        parsed_data = json.loads(message)
+                        if parsed_data["action"] == "jump":
+                            print("received message:", message)
+                            self.jump(parsed_data["duration"])
                 except Exception as e:
                     print(f"Connection lost?: {e}")
 
