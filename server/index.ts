@@ -3,12 +3,12 @@ const FE = "fe" as const
 
 type MsgFromFeToDrone = {
     id: string
-    action: string
+    type: string
     duration: number
 }
 
 type MsgToDrone = {
-    action: string
+    type: string
     duration: number
 }
 
@@ -32,7 +32,7 @@ const server = Bun.serve<{ id: string, type: string }>({
                 try {
                     const msg = JSON.parse(message as string) as MsgFromFeToDrone
                     const msg_to_drone = {
-                        action: msg.action,
+                        type: msg.type,
                         duration: msg.duration
                     } satisfies MsgToDrone
                     server.publish(msg.id, JSON.stringify(msg_to_drone))
@@ -47,8 +47,8 @@ const server = Bun.serve<{ id: string, type: string }>({
                 ws.subscribe(DRONES)
                 ws.subscribe(ws.data.id)
                 server.publish(DRONES, JSON.stringify({
-                    id:ws.data.id,
-                    action:"joined"
+                    id: ws.data.id,
+                    type: "joined"
                 }))
             }
             if (ws.data.type == FE) {
