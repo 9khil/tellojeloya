@@ -14,6 +14,8 @@ FPS = 120
 #Team Mega
 JUMPSPEED = 100
 GRAVITY = -50
+MAX_JUMP_TIME = 2000 # milliseconds
+CAN_JUMP = True
 
 
 class FrontEnd(object):
@@ -52,6 +54,19 @@ class FrontEnd(object):
 
         # create update timer
         pygame.time.set_timer(pygame.USEREVENT + 1, 1000 // FPS)
+
+     # Function to run after a timeout
+    def timeout_callback(self):
+        print("Timeout reached!")
+        CAN_JUMP = False
+        self.up_down_velocity = GRAVITY
+        self.for_back_velocity = 0
+
+
+    # Function to create a timeout
+    def set_timeout(callback, delay, self):
+        pygame.time.set_timer(pygame.USEREVENT, delay)
+        callback(self)
 
     def run(self):
 
@@ -125,6 +140,7 @@ class FrontEnd(object):
         elif key == pygame.K_d:  # set yaw clockwise velocity
             self.yaw_velocity = S
         elif key == pygame.K_j: # JUMP
+            self.set_timeout(self.timeout_callback, MAX_JUMP_TIME, self)
             self.up_down_velocity = JUMPSPEED
             self.for_back_velocity = JUMPSPEED
 
@@ -150,6 +166,9 @@ class FrontEnd(object):
         elif key == pygame.K_j: # JUMP
             self.up_down_velocity = GRAVITY
             self.for_back_velocity = 0
+            CAN_JUMP = True
+
+   
 
     def update(self):
         """ Update routine. Send velocities to Tello.
