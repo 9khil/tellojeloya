@@ -15,10 +15,10 @@ type MsgToDrone = {
 const server = Bun.serve<{ id: string, type: string }>({
     fetch(req, server) {
         const url = new URL(req.url)
-        const clientId = url.searchParams.get('clientId')
+        const client_id = url.searchParams.get('clientId')
         const type = url.searchParams.get('type')
         const upgrade = server.upgrade(req, {
-            data: { id: clientId, type }
+            data: { id: client_id, type }
         })
         return upgrade ? undefined : new Response('Handshake failed', { status: 400 })
     },
