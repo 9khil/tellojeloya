@@ -41,6 +41,7 @@ const server = Bun.serve<{ id: string, type: string }>({
             }
         },
         open(ws) {
+            console.log(`id ${ws.data.id}, type ${ws.data.type} joined`)
             if (ws.data.type == DRONES) {
                 ws.subscribe(DRONES)
                 ws.subscribe(ws.data.id)
