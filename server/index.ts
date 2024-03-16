@@ -46,11 +46,13 @@ const server = Bun.serve<{ id: string, type: string }>({
             if (ws.data.type == DRONES) {
                 ws.subscribe(DRONES)
                 ws.subscribe(ws.data.id)
-                server.publish(DRONES, JSON.stringify(ws.data.id + " joined drones"))
+                server.publish(DRONES, JSON.stringify({
+                    id:ws.data.id,
+                    action:"joined"
+                }))
             }
             if (ws.data.type == FE) {
                 ws.subscribe(FE)
-                server.publish(FE, JSON.stringify(ws.data.id + " joined FE"))
             }
         },
         close(ws, code, reason) {
