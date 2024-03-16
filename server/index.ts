@@ -7,6 +7,11 @@ type FromFeToDrone = {
     duration: number
 }
 
+type Asd = {
+    action: string
+    duration: number
+}
+
 const server = Bun.serve<{ id: string, type: string }>({
     fetch(req, server) {
         const url = new URL(req.url)
@@ -23,14 +28,16 @@ const server = Bun.serve<{ id: string, type: string }>({
                 server.publish(FE, message)
             }
             if (ws.isSubscribed(FE)) {
-                if (message.includes("1")) {
-                    server.publish("1", message)
+                try {
+                    const msg = JSON.parse(message as string) as FromFeToDrone
+                    const msg_to_drone = {
+                        action: msg.action,
+                        duration: msg.duration
+                    }
+                    server.publish(msg.id, JSON.stringify(msg_to_drone))
+                } catch (e) {
+                    console.log("Error parsing message", e)
                 }
-                if (message.includes("2")) {
-                    server.publish("2", message)
-                }
-            } else {
-                server.publish(DRONES, message)
             }
         },
         open(ws) {
