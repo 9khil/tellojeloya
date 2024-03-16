@@ -19,33 +19,35 @@ S = 40
 # A low number also results in input lag, as input information is processed once per frame.
 FPS = 120
 
-#Team Mega
+# Team Mega
 DEBUG = False
 JUMPSPEED = 100
 FORWARD_SPEED = 40
 GRAVITY = -40
-MAX_JUMP_TIME = 1000 # milliseconds
+MAX_JUMP_TIME = 1000  # milliseconds
 
 
 # Use a dictionary to track keys and the time they were pressed
 key_press_times = {}
 
-class FrontEnd(object):
-    """ Maintains the Tello display and moves it through the keyboard keys.
-        Press escape key to quit.
-        The controls are:
-            - T: Takeoff
-            - L: Land
-            - Arrow keys: Forward, backward, left and right.
-            - A and D: Counter clockwise and clockwise rotations (yaw)
-            - W and S: Up and down.
 
-            Team Mega:
-            - J: jump
+class FrontEnd(object):
+    """Maintains the Tello display and moves it through the keyboard keys.
+    Press escape key to quit.
+    The controls are:
+        - T: Takeoff
+        - L: Land
+        - Arrow keys: Forward, backward, left and right.
+        - A and D: Counter clockwise and clockwise rotations (yaw)
+        - W and S: Up and down.
+
+        Team Mega:
+        - J: jump
     """
+
     TIMES_JUMPED = 0
     HEIGHT = "grounded"
-   
+
     def __init__(self):
         # Init pygame
         pygame.init()
@@ -65,7 +67,7 @@ class FrontEnd(object):
         self.speed = 10
 
         self.send_rc_control = False
-       
+
         # create update timer
         pygame.time.set_timer(pygame.USEREVENT + 1, 1000 // FPS)
 
@@ -73,7 +75,7 @@ class FrontEnd(object):
 
         websocket_thread = threading.Thread(target=self.start_websocket_thread)
         websocket_thread.start()
-       
+
         self.tello.connect()
         self.tello.set_speed(self.speed)
 
@@ -85,15 +87,14 @@ class FrontEnd(object):
 
         should_stop = False
         while not should_stop:
-            
-        
-            #print(self.tof())
+
+            # print(self.tof())
             # if(HEIGHT != str(self.tof())):
             # self.send_message(str(self.tof()))
 
             if self.TIMES_JUMPED > 0:
                 self.for_back_velocity = FORWARD_SPEED
-            
+
             for event in pygame.event.get():
                 if event.type == pygame.USEREVENT + 1:
                     self.update()
@@ -110,11 +111,14 @@ class FrontEnd(object):
 
             keys = pygame.key.get_pressed()
             for key, press_time in list(key_press_times.items()):
-                if not keys[key] or pygame.time.get_ticks() - press_time > MAX_JUMP_TIME:
+                if (
+                    not keys[key]
+                    or pygame.time.get_ticks() - press_time > MAX_JUMP_TIME
+                ):
                     print(f"Action for key {key} stopped")
                     del key_press_times[key]
                     self.abortJump()
-            
+
             if frame_read.stopped:
                 break
 
@@ -124,10 +128,12 @@ class FrontEnd(object):
             # battery %
             text = "Battery: {}%".format(self.tello.get_battery())
             textD = "Height: {} cm".format(self.tof())
-            cv2.putText(frame, text, (5, 720 - 5),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            cv2.putText(frame, textD, (5, 680 - 5),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            cv2.putText(
+                frame, text, (5, 720 - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2
+            )
+            cv2.putText(
+                frame, textD, (5, 680 - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2
+            )
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame = np.rot90(frame)
             frame = np.flipud(frame)
@@ -140,54 +146,54 @@ class FrontEnd(object):
 
         # Call it always before finishing. To deallocate resources.
         self.tello.end()
-    
+
     # async def send_message(self):
     #     print("SEND MESSAGE")
     #     print("SEND MESSAGE")
     #     print("SEND MESSAGE")
     #     print("SEND MESSAGE")
-    #     uri = "ws://192.168.0.100:3000?type=drones&clientId=0" 
+    #     uri = "ws://192.168.0.100:3000?type=drones&clientId=0"
     #     async with websockets.connect(uri) as websocket:
     #         while True:
-    #             try:  
+    #             try:
     #                 print("prøver å sende banan")
     #                 await websocket.send("banan")
     #             except Exception as e:
     #                 print(f"Connection lost?: {e}")
 
-
-    def start_websocket_thread(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(self.connectToGameServer())
-    
-
     async def connectToGameServer(self):
-        prev = ""
         uri = "ws://192.168.0.100:3000?type=drones&clientId=0"  # Replace this with the actual WebSocket server address
         async with websockets.connect(uri) as websocket:
-            while True:
-                try:    
-                    # Perform actions with the WebSocket connection
-                    if prev != self.HEIGHT:
-                        await websocket.send(self.HEIGHT)
-                        prev = self.HEIGHT
-                    
-                    message = await websocket.recv()
-                    
-                    if isinstance(message, str): 
-                        print("GOT STRING")
-                        parsed_data = json.loads(message)
-                        if parsed_data["action"] == "jump":
-                            print("received message:", message)
-                            self.jump(parsed_data["duration"])
-                except Exception as e:
-                    print(f"Connection lost?: {e}")
+            send_task = asyncio.create_task(self.send_messages(websocket))
+            recv_task = asyncio.create_task(self.receive_messages(websocket))
+
+        # Wait for both tasks to complete
+        await asyncio.gather(send_task, recv_task)
+
+    async def send_messages(self, websocket):
+        prev_height = None
+        while True:
+            if prev_height != self.HEIGHT:
+                await websocket.send(self.HEIGHT)
+                prev_height = self.HEIGHT
+            elif not self.message_queue.empty():
+                message_to_send = self.message_queue.get()
+                await websocket.send(message_to_send)
+
+    async def receive_messages(self, websocket):
+        while True:
+            message_received = await websocket.recv()
+            if isinstance(message_received, str):
+                print("GOT STRING")
+                parsed_data = json.loads(message_received)
+                if parsed_data["action"] == "jump":
+                    print("received message:", message_received)
+                    self.jump(parsed_data["duration"])
 
     def jump(self, duration):
-        self.TIMES_JUMPED = self.TIMES_JUMPED+1
+        self.TIMES_JUMPED = self.TIMES_JUMPED + 1
         self.up_down_velocity = JUMPSPEED
-        time.sleep(duration/1000)
+        time.sleep(duration / 1000)
         self.abortJump()
 
     def abortJump(self):
@@ -198,12 +204,12 @@ class FrontEnd(object):
         if toff < 30:
             return "dead"
         elif toff == 6553:
-             return "grounded"
+            return "grounded"
         else:
             return self.tello.get_distance_tof()
 
     def keydown(self, key):
-        """ Update velocities based on key pressed
+        """Update velocities based on key pressed
         Arguments:
             key: pygame key
         """
@@ -223,17 +229,21 @@ class FrontEnd(object):
             self.yaw_velocity = -S
         elif key == pygame.K_d:  # set yaw clockwise velocity
             self.yaw_velocity = S
-        elif key == pygame.K_j: # JUMP
+        elif key == pygame.K_j:  # JUMP
             self.jump()
 
     def keyup(self, key):
-        """ Update velocities based on key released
+        """Update velocities based on key released
         Arguments:
             key: pygame key
         """
-        if key == pygame.K_UP or key == pygame.K_DOWN:  # set zero forward/backward velocity
+        if (
+            key == pygame.K_UP or key == pygame.K_DOWN
+        ):  # set zero forward/backward velocity
             self.for_back_velocity = 0
-        elif key == pygame.K_LEFT or key == pygame.K_RIGHT:  # set zero left/right velocity
+        elif (
+            key == pygame.K_LEFT or key == pygame.K_RIGHT
+        ):  # set zero left/right velocity
             self.left_right_velocity = 0
         elif key == pygame.K_w or key == pygame.K_s:  # set zero up/down velocity
             self.up_down_velocity = 0
@@ -245,21 +255,20 @@ class FrontEnd(object):
         elif key == pygame.K_l:  # land
             not self.tello.land()
             self.send_rc_control = False
-        elif key == pygame.K_j: # JUMP
+        elif key == pygame.K_j:  # JUMP
             if key in key_press_times:
                 del key_press_times[key]
             self.abortJump()
-            
-
-
 
     def update(self):
-        """ Update routine. Send velocities to Tello.
-        """
+        """Update routine. Send velocities to Tello."""
         if self.send_rc_control:
-            self.tello.send_rc_control(self.left_right_velocity, self.for_back_velocity,
-                self.up_down_velocity, self.yaw_velocity)
-
+            self.tello.send_rc_control(
+                self.left_right_velocity,
+                self.for_back_velocity,
+                self.up_down_velocity,
+                self.yaw_velocity,
+            )
 
 
 def main():
@@ -269,5 +278,12 @@ def main():
 
     frontend.run()
 
-if __name__ == '__main__':
+    # Create an event loop
+    loop = asyncio.get_event_loop()
+
+    # Run the frontend and the WebSocket connection
+    loop.run_until_complete(frontend.connectToGameServer())
+
+
+if __name__ == "__main__":
     main()
