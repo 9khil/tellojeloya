@@ -1,10 +1,14 @@
 from djitellopy import Tello
 import asyncio
 import websockets
+import threading
+import pyautogui
 import cv2
 import pygame
 import numpy as np
+import json
 import time
+from multiprocessing import Process
 
 from pygame.event import Event
 
@@ -16,10 +20,12 @@ S = 40
 FPS = 120
 
 #Team Mega
-DEBUG = True
+DEBUG = False
 JUMPSPEED = 100
+FORWARD_SPEED = 40
 GRAVITY = -40
 MAX_JUMP_TIME = 1000 # milliseconds
+
 
 # Use a dictionary to track keys and the time they were pressed
 key_press_times = {}
@@ -37,7 +43,9 @@ class FrontEnd(object):
             Team Mega:
             - J: jump
     """
-
+    TIMES_JUMPED = 0
+    HEIGHT = "grounded"
+   
     def __init__(self):
         # Init pygame
         pygame.init()
@@ -57,13 +65,15 @@ class FrontEnd(object):
         self.speed = 10
 
         self.send_rc_control = False
-
+       
         # create update timer
         pygame.time.set_timer(pygame.USEREVENT + 1, 1000 // FPS)
 
     def run(self):
 
-        asyncio.run(self.connectToGameServer())
+        websocket_thread = threading.Thread(target=self.start_websocket_thread)
+        websocket_thread.start()
+       
         self.tello.connect()
         self.tello.set_speed(self.speed)
 
@@ -75,7 +85,15 @@ class FrontEnd(object):
 
         should_stop = False
         while not should_stop:
+            
+        
+            #print(self.tof())
+            # if(HEIGHT != str(self.tof())):
+            # self.send_message(str(self.tof()))
 
+            if self.TIMES_JUMPED > 0:
+                self.for_back_velocity = FORWARD_SPEED
+            
             for event in pygame.event.get():
                 if event.type == pygame.USEREVENT + 1:
                     self.update()
@@ -122,24 +140,50 @@ class FrontEnd(object):
 
         # Call it always before finishing. To deallocate resources.
         self.tello.end()
-
     
-    async def connectToGameServer():
-        uri = "ws://10.168.119.237:3000"  # Replace this with the actual WebSocket server address
+    async def send_message(self):
+        print("SEND MESSAGE")
+        print("SEND MESSAGE")
+        print("SEND MESSAGE")
+        print("SEND MESSAGE")
+        uri = "ws://192.168.0.100:3000?type=drones&clientId=0" 
         async with websockets.connect(uri) as websocket:
             while True:
-                # Perform actions with the WebSocket connection
-                message = await websocket.recv()
-                print("Received message:", message)
+                try:  
+                    print("prøver å sende banan")
+                    await websocket.send("banan")
+                except Exception as e:
+                    print(f"Connection lost?: {e}")
 
-    def jump(self):
+
+    def start_websocket_thread(self):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_forever(self.send_message())
+    
+
+    async def connectToGameServer(self):
+        uri = "ws://192.168.0.100:3000?type=drones&clientId=0"  # Replace this with the actual WebSocket server address
+        async with websockets.connect(uri) as websocket:
+            while True:
+                try:    
+                    # Perform actions with the WebSocket connection
+                    message = await websocket.recv()
+                    print("received message:", message)
+                    parsed_data = json.loads(message)
+                    if parsed_data["action"] == "jump":
+                        self.jump(parsed_data["duration"])
+                except Exception as e:
+                    print(f"Connection lost?: {e}")
+
+    def jump(self, duration):
+        self.TIMES_JUMPED = self.TIMES_JUMPED+1
         self.up_down_velocity = JUMPSPEED
-        if not DEBUG:
-            self.for_back_velocity = JUMPSPEED
+        time.sleep(duration/1000)
+        self.abortJump()
 
     def abortJump(self):
         self.up_down_velocity = GRAVITY
-        self.for_back_velocity = 0
 
     def tof(self):
         toff = self.tello.get_distance_tof()
@@ -209,13 +253,13 @@ class FrontEnd(object):
                 self.up_down_velocity, self.yaw_velocity)
 
 
+
 def main():
     frontend = FrontEnd()
 
     # run frontend
 
     frontend.run()
-
 
 if __name__ == '__main__':
     main()
