@@ -33,7 +33,7 @@ const server = Bun.serve<{ id: string, type: string }>({
                     const msg_to_drone = {
                         action: msg.action,
                         duration: msg.duration
-                    }
+                    } satisfies Asd
                     server.publish(msg.id, JSON.stringify(msg_to_drone))
                 } catch (e) {
                     console.log("Error parsing message", e)
