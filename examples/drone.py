@@ -25,6 +25,7 @@ JUMPSPEED = 100
 FORWARD_SPEED = 40
 GRAVITY = -40
 MAX_JUMP_TIME = 1000 # milliseconds
+CLIENT_ID = "0"
 
 
 # Use a dictionary to track keys and the time they were pressed
@@ -164,7 +165,7 @@ class FrontEnd(object):
 
     async def connectToGameServer(self):
         prev = ""
-        uri = "ws://192.168.0.100:3000?type=drones&clientId=0"  # Replace this with the actual WebSocket server address
+        uri = "ws://192.168.0.100:3000?type=drones&clientId={}".format(CLIENT_ID)  # Replace this with the actual WebSocket server address
         async with websockets.connect(uri) as websocket:
             while True:
                 try:    
