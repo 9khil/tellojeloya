@@ -22,7 +22,7 @@ FPS = 120
 #Team Mega
 DEBUG = False #brukes ikke
 JUMPSPEED = 100
-FORWARD_SPEED = 40
+FORWARD_SPEED = 10
 GRAVITY = -40
 MAX_JUMP_TIME = 1000 # milliseconds
 CLIENT_ID = "0"
@@ -178,7 +178,7 @@ class FrontEnd(object):
     def jump(self, duration):
         self.TIMES_JUMPED = self.TIMES_JUMPED+1
         self.up_down_velocity = JUMPSPEED
-        self.for_back_velocity = 50
+        self.for_back_velocity = FORWARD_SPEED
         print("Up and away!", self.up_down_velocity, self.for_back_velocity)
         time.sleep(duration / 1000)
         self.abortJump()
@@ -190,7 +190,7 @@ class FrontEnd(object):
         self.tello.takeoff()
 
     def land(self):
-        self.for_back_velocity = -30
+        self.for_back_velocity = -20
         print("Aborting")
         self.tello.land()
 
