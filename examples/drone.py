@@ -22,7 +22,7 @@ FPS = 120
 #Team Mega
 DEBUG = False #brukes ikke
 JUMPSPEED = 100
-FORWARD_SPEED = 10
+FORWARD_SPEED = 25
 GRAVITY = -40
 MAX_JUMP_TIME = 1000 # milliseconds
 CLIENT_ID = "0"
@@ -145,7 +145,7 @@ class FrontEnd(object):
 
     async def connectToGameServer(self):
         prev = ""
-        uri = "ws://192.168.0.100:3000?type=drones&clientId={}".format(CLIENT_ID)  # Replace this with the actual WebSocket server address
+        uri = "ws://192.168.0.101:8081?type=drones&clientId={}".format(CLIENT_ID)  # Replace this with the actual WebSocket server address
         async with websockets.connect(uri) as websocket:
             await websocket.send(json.dumps({"type": "register", "id": CLIENT_ID}))
             while True:
