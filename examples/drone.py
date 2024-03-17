@@ -172,6 +172,10 @@ class FrontEnd(object):
                         elif parsed_data["type"] == "takeoff":
                             print("Takeoff:", message)
                             self.takeoff()
+                        elif parsed_data["type"] == "flip":
+                            print("FLIPPPPP")
+                            self.flipBackward()
+                            
                 except Exception as e:
                     print(f"Connection lost?: {e}")
 
@@ -183,6 +187,9 @@ class FrontEnd(object):
         time.sleep(duration / 1000)
         self.abortJump()
         print("Down and out", self.up_down_velocity, self.for_back_velocity)
+
+    def flipBackward(self):
+        self.tello.flip_back()
 
     def takeoff(self):
         self.send_rc_control = True
