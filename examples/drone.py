@@ -152,7 +152,7 @@ class FrontEnd(object):
         prev = ""
         uri = "ws://192.168.0.100:3000?type=drones&clientId={}".format(CLIENT_ID)  # Replace this with the actual WebSocket server address
         async with websockets.connect(uri) as websocket:
-            await websocket.send("{\"type\": \"register\", \"id\": \"0\"}")
+            await websocket.send(json.dumps({"type": "register", "id": CLIENT_ID}))
             while True:
                 try:
                     tof = "grounded"
