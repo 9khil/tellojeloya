@@ -22,11 +22,11 @@ FPS = 120
 #Team Mega
 DEBUG = False
 JUMPSPEED = 100
-FORWARD_SPEED = 40
+FORWARD_SPEED = 50
 GRAVITY = -40
 MAX_JUMP_TIME = 1000 # milliseconds
 CLIENT_ID = "0"
-
+MAX_HEIGHT: 230
 
 # Use a dictionary to track keys and the time they were pressed
 key_press_times = {}
@@ -52,8 +52,8 @@ class FrontEnd(object):
         pygame.init()
 
         # Creat pygame window
-        pygame.display.set_caption("Flappydrone #1")
-        self.screen = pygame.display.set_mode([960, 720])
+        # pygame.display.set_caption("Flappydrone #1")
+        # self.screen = pygame.display.set_mode([960, 720])
 
         # Init Tello object that interacts with the Tello drone
         self.tello = Tello()
@@ -82,7 +82,7 @@ class FrontEnd(object):
         self.tello.streamoff()
         self.tello.streamon()
 
-        frame_read = self.tello.get_frame_read()
+        # frame_read = self.tello.get_frame_read()
 
         should_stop = False
         while not should_stop:
@@ -116,46 +116,31 @@ class FrontEnd(object):
                     del key_press_times[key]
                     self.abortJump()
             
-            if frame_read.stopped:
-                break
+            # if frame_read.stopped:
+            #     break
 
-            self.screen.fill([0, 0, 0])
+            # self.screen.fill([0, 0, 0])
 
-            frame = frame_read.frame
-            # battery %
-            text = "Battery: {}%".format(self.tello.get_battery())
-            textD = "Height: {} cm".format(self.tof())
-            cv2.putText(frame, text, (5, 720 - 5),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            cv2.putText(frame, textD, (5, 680 - 5),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame = np.rot90(frame)
-            frame = np.flipud(frame)
+            # frame = frame_read.frame
+            # # battery %
+            # text = "Battery: {}%".format(self.tello.get_battery())
+            # textD = "Height: {} cm".format(self.tof())
+            # cv2.putText(frame, text, (5, 720 - 5),
+            #     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            # cv2.putText(frame, textD, (5, 680 - 5),
+            #     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # frame = np.rot90(frame)
+            # frame = np.flipud(frame)
 
-            frame = pygame.surfarray.make_surface(frame)
-            self.screen.blit(frame, (0, 0))
-            pygame.display.update()
+            # frame = pygame.surfarray.make_surface(frame)
+            # self.screen.blit(frame, (0, 0))
+            # pygame.display.update()
 
-            time.sleep(1 / FPS)
+            # time.sleep(1 / FPS)
 
         # Call it always before finishing. To deallocate resources.
         self.tello.end()
-    
-    # async def send_message(self):
-    #     print("SEND MESSAGE")
-    #     print("SEND MESSAGE")
-    #     print("SEND MESSAGE")
-    #     print("SEND MESSAGE")
-    #     uri = "ws://192.168.0.100:3000?type=drones&clientId=0" 
-    #     async with websockets.connect(uri) as websocket:
-    #         while True:
-    #             try:  
-    #                 print("prøver å sende banan")
-    #                 await websocket.send("banan")
-    #             except Exception as e:
-    #                 print(f"Connection lost?: {e}")
-
 
     def start_websocket_thread(self):
         loop = asyncio.new_event_loop()
@@ -167,29 +152,52 @@ class FrontEnd(object):
         prev = ""
         uri = "ws://192.168.0.100:3000?type=drones&clientId={}".format(CLIENT_ID)  # Replace this with the actual WebSocket server address
         async with websockets.connect(uri) as websocket:
+            await websocket.send("{\"type\": \"register\", \"id\": \"0\"}")
             while True:
-                try:    
+                try:
+                    tof = "grounded"
+                    if (self.tello.get_distance_tof() < 6000):
+                        tof = self.tof()
+
                     # Perform actions with the WebSocket connection
-                    if prev != self.HEIGHT:
-                        await websocket.send(self.HEIGHT)
-                        prev = self.HEIGHT
+                    # if prev != self.HEIGHT:
+                        #await websocket.send(json.dumps({"type": "update", "y": self.HEIGHT}))
+                    await websocket.send(json.dumps({"id": "0","type": "update", "y": tof}))
+                    prev = self.HEIGHT
                     
                     message = await websocket.recv()
-                    
                     if isinstance(message, str): 
-                        print("GOT STRING")
                         parsed_data = json.loads(message)
-                        if parsed_data["action"] == "jump":
+                        if parsed_data["type"] == "jump":
                             print("received message:", message)
                             self.jump(parsed_data["duration"])
+                        elif parsed_data["type"] == "stop":
+                            print("ABORT MISSION:", message)
+                            self.land()
+                        elif parsed_data["type"] == "takeoff":
+                            print("Takeoff:", message)
+                            self.takeoff()
                 except Exception as e:
                     print(f"Connection lost?: {e}")
 
     def jump(self, duration):
         self.TIMES_JUMPED = self.TIMES_JUMPED+1
         self.up_down_velocity = JUMPSPEED
-        time.sleep(duration/1000)
+        self.for_back_velocity = 50
+        print("Up and away!", self.up_down_velocity, self.for_back_velocity)
+        time.sleep(duration / 1000)
         self.abortJump()
+        print("Down and out", self.up_down_velocity, self.for_back_velocity)
+
+    def takeoff(self):
+        self.send_rc_control = True
+        print("Takeoff")
+        self.tello.takeoff()
+
+    def land(self):
+        self.for_back_velocity = -30
+        print("Aborting")
+        self.tello.land()
 
     def abortJump(self):
         self.up_down_velocity = GRAVITY
