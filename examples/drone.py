@@ -157,7 +157,7 @@ class FrontEnd(object):
                     # Perform actions with the WebSocket connection
                     # if prev != self.HEIGHT:
                         #await websocket.send(json.dumps({"type": "update", "y": self.HEIGHT}))
-                    await websocket.send(json.dumps({"id": "0","type": "update", "y": tof}))
+                    await websocket.send(json.dumps({"id": CLIENT_ID,"type": "update", "y": tof}))
                     prev = self.HEIGHT
                     
                     message = await websocket.recv()
