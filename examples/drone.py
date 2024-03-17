@@ -20,13 +20,13 @@ S = 40
 FPS = 120
 
 #Team Mega
-DEBUG = False
+DEBUG = False #brukes ikke
 JUMPSPEED = 100
-FORWARD_SPEED = 50
+FORWARD_SPEED = 40
 GRAVITY = -40
 MAX_JUMP_TIME = 1000 # milliseconds
 CLIENT_ID = "0"
-MAX_HEIGHT: 230
+MAX_HEIGHT: 230 #brukes ikke
 
 # Use a dictionary to track keys and the time they were pressed
 key_press_times = {}
@@ -79,19 +79,14 @@ class FrontEnd(object):
         self.tello.set_speed(self.speed)
 
         # In case streaming is on. This happens when we quit this program without the escape key.
-        self.tello.streamoff()
-        self.tello.streamon()
+        # self.tello.streamoff()
+        # self.tello.streamon()
 
         # frame_read = self.tello.get_frame_read()
 
         should_stop = False
         while not should_stop:
             
-        
-            #print(self.tof())
-            # if(HEIGHT != str(self.tof())):
-            # self.send_message(str(self.tof()))
-
             if self.TIMES_JUMPED > 0:
                 self.for_back_velocity = FORWARD_SPEED
             
